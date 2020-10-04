@@ -2,9 +2,11 @@
 title: "The Impact of the Niger-Delta Amnesty Program."
 author: "Uzoma Iloanugo"
 date: "30/08/2020"
-output: html_document
-header-includes:
-   - \usepackage{float}
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+header-includes: \usepackage{float}
 ---
 
 ## Introduction 
@@ -73,25 +75,26 @@ head(con_data1)
 I also generate variables to identify and represent the different classification of violence in the ACLED dataset. These variables include battle involving government forces (Battle), violence against civilians (VAC), protests (Protests) and Violence that involved rebel, ethnic and political militias (Rebel).
 
 ```{r, results='hide'}
-con_data1<-mutate(con_data1, Battles=0, VAC=0, Protests=0, Rebel=0)
+con_data1<-mutate(con_data1, Battles=0, VAC=0, Protests=0, Rebel=0, Fata_rebel=0)
 
 con_data1$Battles[con_data1$event_type=="Battles"]<-1 
 con_data1$Protests<-with(con_data1, ifelse(event_type=="Protests", 1, Protests))
 con_data1$VAC<-with(con_data1, ifelse(event_type=="Violence against civilians", 1, VAC))
 con_data1$Rebel[con_data1$inter1==2 | con_data1$inter1==3 | con_data1$inter1==4]<-1
 con_data1$Rebel[con_data1$inter2==2 | con_data1$inter2==3 | con_data1$inter2==4]<-1
+con_data1$Fata_rebel[con_data1$Rebel==1]<-con_data1$fatalities[con_data1$Rebel==1]
 ```
 
 I group the dataset by admin1 (State), admin2(LGA), year.
 ```{r, results='hide'}
-con_data1<-dplyr::select(con_data1, year, admin1, admin2, fatalities, event, Battles, VAC, Protests, Rebel)
+con_data1<-dplyr::select(con_data1, year, admin1, admin2, Fata_rebel, fatalities, event, Battles, VAC, Protests, Rebel)
 con_data1<-group_by(con_data1, admin1, admin2, year)
 head(con_data1)
 ```
 
 Based on the grouping variables, I sum the number of all classes of incidence.
 ```{r, warning=FALSE}
-con_ev_data<-summarise_at(con_data1, vars(fatalities, event, Battles, VAC, Protests, Rebel), 
+con_ev_data<-summarise_at(con_data1, vars(Fata_rebel, fatalities, event, Battles, VAC, Protests, Rebel), 
              funs(sum(., na.rm=T)))
 head(con_ev_data)
 ```
@@ -210,8 +213,11 @@ con_main$prob_fatalities[con_main$fatalities>0]<-1
 con_main$prob_protest<-0
 con_main$prob_protest[con_main$Protests>0]<-1
 
+con_main$prob_Fata_rebel<-0
+con_main$prob_Fata_rebel[con_main$Fata_rebel>0]<-1
+
 names(con_main)
-tail(con_main[c("lgga", "year", "prob_rebel", "prob_Battles", "prob_VAC", "prob_fatalities", "prob_protest")])
+tail(con_main[c("lgga", "year", "prob_rebel", "prob_Battles", "prob_VAC", "prob_fatalities", "prob_protest", 'prob_Fata_rebel')])
 ```
 
 The next step will be to specifically identify LGAs with oil fields in teh Nigeria. To do this, I use a dataset retrieved by Koos and Pierskalla (2016) complied by GIS solutions Nigeria. 
@@ -322,7 +328,7 @@ con_mean$niger_del_oilf<-as.factor(con_mean$niger_del_oilf)
 
 The plot of unconditional means of rebel/militia event using ggplot2. 
 ```{r}
-ggplot(data = con_mean, aes(x = year, y = Rebel, group = niger_del_oilf, colour = niger_del_oilf)) +
+ggplot(data = con_mean, aes(x = year, y = prob_rebel, group = niger_del_oilf, colour = niger_del_oilf)) +
   #geom_point(size = 4, alpha = .5) + # always plot the raw data
   stat_summary(fun.data = "mean_cl_normal") +
   labs(title = "Rebel / Militia Activities in Niger-Delta- (95% C.I.)")+
@@ -380,13 +386,15 @@ con_main$yr_2015[con_main$year==2015]<-1
 
 con_main$yr_2016<-0
 con_main$yr_2016[con_main$year==2016]<-1
+
+names(con_main)
 ```
 
-```{r, comment=NA, results='hold', warning=FALSE, echo=TRUE}
-con_felm_yrs_loop<-list(length(con_main[, 12:17]))
+```{r warning=FALSE, comment=NA, results='hide'}
+con_felm_yrs_loop<-list(length(con_main[, 13:19]))
 # Event study regression including interaction of oil field with year dummies for all conflict types. 
-for (i in seq_along(con_main[, 12:17])) {
-  con_felm_yrs_loop[[i]]<-felm(con_main[, 12:17][[i]]~yr_2006:niger_del_oilf+
+for (i in seq_along(con_main[, 13:19])) {
+  con_felm_yrs_loop[[i]]<-felm(con_main[, 13:19][[i]]~yr_2006:niger_del_oilf+
                                  yr_2007:niger_del_oilf+
                                  yr_2008:niger_del_oilf+
                                  yr_2009:niger_del_oilf+
@@ -399,7 +407,7 @@ for (i in seq_along(con_main[, 12:17])) {
                                | year:as.factor(lgga) + as.factor(year) + as.factor(lgga)| 0 | state.x, 
                                data = con_main, subset = niger_del_all==1, exactDOF=TRUE, bootcluster= "model")
   
-  names(con_felm_yrs_loop)[[i]]<-names(con_main[, c(16, 30:34)])[[i]]
+  names(con_felm_yrs_loop)[[i]]<-names(con_main[, 13:19])[[i]]
 }
 
 #Plot of the event study estimates.
@@ -423,7 +431,7 @@ ggcoefstats(con_felm_yrs_loop[[1]], only.significant = TRUE,
 
   I create a list of dependent variable in my analysis. In addition to the probability of rebel activities, I also consider battles involving government forces, violence against civilians, protests and fatalities. Using the index of the desired dependent variables, I move the dependent variables into a list con_types. 
 ```{r, echo=TRUE, warning=FALSE}
-con_types<-con_main[, 12:17]
+con_types<-con_main[c(13:19, 4)]
 names(con_types)
 ```
 
