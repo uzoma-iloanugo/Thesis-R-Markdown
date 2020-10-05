@@ -350,45 +350,18 @@ $$ Rebel_{lt}= \alpha_{l} +\delta_{t}  + \beta_{0} \boldsymbol{Policy_{t} \times
   
   To check that my regression model does not violate the main parallel trend assumption, I conduct an event type study. The event type study allows us to see how violence in LGAs with and without oil fields in the Niger-Delta changed over time. We are interested in how the change differed immediate before and after the amnesty policy was enacted. That is, was the difference in violence between both types of LGAs relatively stable before amnesty, and was there a huge change in the difference immediately after the amnesty policy was issued. The command below runs the event study estimation and plots the regression coefficient.
   
-```{r,  echo=FALSE, results='hide', warning=FALSE}
-con_main$yr_2005<-0
-con_main$yr_2005[con_main$year==2005]<-1
+```{r, warning=FALSE}
+# Create dummy variables for every year (yr_200*) in the dataset
 
-con_main$yr_2006<-0
-con_main$yr_2006[con_main$year==2006]<-1
+for (i in seq(2005, 2016)) {
+  con_main[[paste0("yr_", i)]]<-0
+  con_main[[paste0("yr_", i)]][con_main$year== i ]<-1
+}
 
-con_main$yr_2007<-0
-con_main$yr_2007[con_main$year==2007]<-1
+head(con_main[c("lgga", "year", "yr_2005", "yr_2006", "yr_2007", "yr_2008")])
 
-con_main$yr_2008<-0
-con_main$yr_2008[con_main$year==2008]<-1
-
-con_main$yr_2009<-0
-con_main$yr_2009[con_main$year==2009]<-1
-
-con_main$yr_2010<-0
-con_main$yr_2010[con_main$year==2010]<-1
-
-con_main$yr_2011<-0
-con_main$yr_2011[con_main$year==2011]<-1
-
-con_main$yr_2012<-0
-con_main$yr_2012[con_main$year==2012]<-1
-
-con_main$yr_2013<-0
-con_main$yr_2013[con_main$year==2013]<-1
-
-con_main$yr_2014<-0
-con_main$yr_2014[con_main$year==2014]<-1
-
-con_main$yr_2015<-0
-con_main$yr_2015[con_main$year==2015]<-1
-
-con_main$yr_2016<-0
-con_main$yr_2016[con_main$year==2016]<-1
-
-names(con_main)
 ```
+
 
 ```{r warning=FALSE, comment=NA, results='hide'}
 con_felm_yrs_loop<-list(length(con_main[, 13:19]))
