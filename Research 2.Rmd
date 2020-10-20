@@ -187,8 +187,10 @@ con_main$amnes_yr<-0
 con_main$amnes_yr[con_main$year>=2010]<-1
 con_main$niger_del_all<-0
 con_main$niger_del_all[con_main$state.x=="Akwa" | con_main$state.x=="Bayelsa" 
-                   | con_main$state.x=="Edo" | con_main$state.x=="Rivers" 
-                   | con_main$state.x=="Cross" | con_main$state.x=="Delta"]<-1
+                   | con_main$state.x=="Edo" | con_main$state.x=="Rivers"
+                   | con_main$state.x=="Abia" | con_main$state.x=="Imo"
+                   | con_main$state.x=="Cross" | con_main$state.x=="Delta"
+                   | con_main$state.x=="Ondo"]<-1
 names(con_main)
 head(con_main)
 ```
@@ -328,7 +330,7 @@ con_mean$niger_del_oilf<-as.factor(con_mean$niger_del_oilf)
 
 The plot of unconditional means of rebel/militia event using ggplot2. 
 ```{r}
-ggplot(data = con_mean, aes(x = year, y = prob_rebel, group = niger_del_oilf, colour = niger_del_oilf)) +
+ggplot(data = con_mean, aes(x = year, y = Rebel, group = niger_del_oilf, colour = niger_del_oilf)) +
   #geom_point(size = 4, alpha = .5) + # always plot the raw data
   stat_summary(fun.data = "mean_cl_normal") +
   labs(title = "Rebel / Militia Activities in Niger-Delta- (95% C.I.)")+
@@ -415,13 +417,12 @@ con_est_f<-list(length(con_types)) # Create a container for my regression result
 for (i in seq_along(con_types)) {
   con_est_f[[i]] <-felm(con_types[[i]]~niger_del_oilf:amnes_yr | year:as.factor(lgga) + as.factor(year) + as.factor(lgga) | 0 | state.x, data = con_main, subset = niger_del_all==1, exactDOF = TRUE, bootcluster = "model")
 }
-
 ```
 
 I display the regression results using the stargazer package. 
 ```{r, comment=NA, results='hold'}
-stargazer(con_est_f[[1]], con_est_f[[2]],con_est_f[[3]],con_est_f[[4]], con_est_f[[5]],con_est_f[[6]], type = "text" ,title = "Rebel and Militia Violence", 
-          style = "aer", column.labels = c("Rebel", "All Events", "Battles", "Civilian Violence", "Fatalities", "Protest"), 
+stargazer(con_est_f[[1]], con_est_f[[2]],con_est_f[[3]],con_est_f[[6]], con_est_f[[4]],con_est_f[[6]], type = "text" ,title = "Rebel and Militia Violence", 
+          style = "aer", column.labels = c("Rebel", "Battles", "Civilian Violence", "Protest", "All Events", "Fatalities"), 
           covariate.labels = c("Policy Yr * Oil Field"), 
           dep.var.caption = c("Conflict Violence"),
           dep.var.labels.include = F, nobs = T, align = TRUE)
